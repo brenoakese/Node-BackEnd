@@ -8,8 +8,16 @@ class UserService {
     }
 
     
-    async create({ name, email, password }) {
-        return this.userRepository.create({ name, email, password });
+    async create(userDto) {
+
+        const user = new User(userDto.name, userDto.email, userDto.password);
+        await user.encryptPassword();
+
+        return this.userRepository.create({
+            name: user.name,
+            email: user.email,
+            password: user.password,
+        });
     }
     
     async findByEmail(email) {
