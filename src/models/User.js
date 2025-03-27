@@ -1,11 +1,27 @@
+import { v4 as uuidv4 } from "uuid";
+import { bcrypt } from "bcrypt";
 
 class User {
-    constructor(id, name, email, password) {
-        this.id = id;
-        this.name = name;
-        this.email = email;
-        this.password = password;
-    }
+  id;
+  name;
+  email;
+  password;
+
+  constructor(id = uuidv4(), name, email, password) {
+    this.id = id;
+    this.name = name;
+    this.email = email;
+    this.password = password;
+  }
+
+  async encryptPassword() {
+    const rounds = 10;
+    this.password = await bcrypt.hash(this.password, rounds);
+  }
+
+  async checkPassword(reqPassword) {
+    return await bcrypt.compare(reqPassword, this.password);
+  }
 }
 
 export default User;
