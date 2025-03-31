@@ -32,6 +32,6 @@ router.post(
   authController.register
 );
 
-router.post('/logout', authController.logout);
+
 
 export default router;

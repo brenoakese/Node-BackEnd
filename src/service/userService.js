@@ -10,6 +10,12 @@ class UserService {
     
     async create(userDto) {
 
+        const existingUser = await this.userRepository.findByEmail(userDto.email);
+
+        if (existingUser) {
+            throw new Error("User already exists");
+        }
+
         const user = new User(userDto.name, userDto.email, userDto.password);
         await user.encryptPassword();
 
