@@ -1,10 +1,13 @@
-import userDto from "../dtos/user.dto.js";
-import UserService from "../service/user.service.js";
+import userDto from "../dtos/userDto.js";
+import UserService from "../service/userService.js";
 
 
-const userService = new UserService();
 
-class authController {
+class AuthController {
+
+    constructor(){
+        this.userService = new UserService();
+    }
 
     async register (req,res) {
         try {
@@ -47,3 +50,5 @@ class authController {
         }
     }
 }
+
+export default AuthController;

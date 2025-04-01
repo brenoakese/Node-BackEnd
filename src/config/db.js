@@ -1,33 +1,42 @@
 import dotenv from "dotenv";
-import { Pool } from "pg";
+import pkg from "pg";
 
 dotenv.config();
 
-const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_DATABASE,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
-});
+const { Pool } = pkg;
 
-(async () => {
-  try {
-    await pool.connect();
-    console.log(
-      "Conexão com o banco de dados PostgreSQL estabelecida com sucesso!"
-    );
-  } catch (error) {
-    console.error(
-      "Erro ao conectar ao banco de dados PostgreSQL:",
-      error.message
-    );
-    process.exit(1);
+class Database {
+  constructor() {
+    this.pool = new Pool({
+      user: process.env.DB_USER,
+      host: process.env.DB_HOST,
+      database: process.env.DB_DATABASE,
+      password: process.env.DB_PASSWORD,
+      port: process.env.DB_PORT,
+    });
   }
-})();
 
-async function query(query, params) {
-  return this.pool.query(query, params);
+  async connect() {
+    try {
+      await this.pool.connect();
+      console.log(
+        "Conexão com o banco de dados PostgreSQL estabelecida com sucesso!"
+      );
+    } catch (error) {
+      console.error(
+        "Erro ao conectar ao banco de dados PostgreSQL:",
+        error.message
+      );
+      process.exit(1);
+    }
+  }
+
+  async query(query, params) {
+    return this.pool.query(query, params);
+  }
 }
 
-export default pool;
+const db = new Database();
+db.connect();
+
+export default db;

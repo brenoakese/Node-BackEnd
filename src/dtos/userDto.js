@@ -10,3 +10,5 @@ class UserDTO {
         this.email = email;
     }
 }
+
+export default UserDTO;
