@@ -15,14 +15,14 @@ const validate = (req, res, next) => {
 };
 
 router.post(
-  "/login",
+  "/auth/login",
   authValidations.login,
   validate,
   authController.login.bind(authController)
 );
 
 router.post(
-  "/register",
+  "/auth/register",
   authValidations.register,
   validate,
   authController.register.bind(authController)
