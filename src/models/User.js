@@ -1,7 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
-import pkg from 'bcrypt';
+import bcrypt from "bcrypt";
 
-const {bcrypt} = pkg;
 
 class User {
   id;
@@ -17,6 +16,12 @@ class User {
   }
 
   async encryptPassword() {
+    console.log("Encrypting password...", this.password);
+    
+    if (!this.password) {
+      throw new Error("Password is required for encryption");
+    }
+    
     const rounds = 10;
     this.password = await bcrypt.hash(this.password, rounds);
   }

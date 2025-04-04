@@ -7,19 +7,29 @@ class UserRepository {
     this.db = db;
   }
 
-  async create({ name, email, password }) {
-    const { rows } = await db.query(
-      "INSERT INTO usuarios (name, email, password) VALUES ($1, $2, $3) RETURNING *",
-      [name, email, password]
-    );
+  async create(user) {
+    try {
+      const { name, email, password } = user;
 
-    return rows[0];
+      console.log(`${name}, ${email}, ${password}`);
+
+      const { rows } = await db.query(
+        "INSERT INTO public.usuarios (name, email, password) VALUES ($1, $2, $3) RETURNING *",
+        [name, email, password]
+      );
+
+      return rows[0];
+    } catch (error) {
+      console.error("Error creating user:", error);
+      throw new Error("Error creating user");
+    }
   }
 
   async findByEmail(email) {
-    const { rows } = await db.query("SELECT * FROM usuarios WHERE email = $1", [
-      email,
-    ]);
+    const { rows } = await db.query(
+      "SELECT * FROM public.usuarios WHERE email = $1",
+      [email]
+    );
 
     return rows[0];
   }
