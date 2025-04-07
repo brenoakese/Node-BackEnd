@@ -31,7 +31,12 @@ class UserRepository {
       [email]
     );
 
-    return rows[0];
+    return new User(
+      rows[0].id,
+      rows[0].name,
+      rows[0].email,
+      rows[0].password
+    );
   }
 }
 

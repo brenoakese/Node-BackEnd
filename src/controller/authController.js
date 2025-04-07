@@ -6,11 +6,9 @@ class AuthController {
 
   async register(req, res) {
     try {
-
       console.log(req.body);
 
       const { name, email, password } = req.body;
-
 
       const user = await this.userService.create(
         new userDto(name, password, email)
@@ -29,12 +27,22 @@ class AuthController {
 
   async login(req, res) {
     try {
-      const user = await userService.findByEmail(req.body.email);
+      const { email, password } = req.body;
+
+      console.log("email: ", email, "password: ", password);
+
+      if (!email || !password) {
+        return res
+          .status(400)
+          .json({ error: "Email and password are required" });
+      }
+
+      const user = await this.userService.findByEmail(email);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      const isPasswordValid = await user.comparePassword(req.body.password);
+      const isPasswordValid = await user.checkPassword(password);
 
       if (!isPasswordValid) {
         return res.status(401).json({ error: "Invalid password" });
@@ -47,7 +55,7 @@ class AuthController {
           email: user.email,
         },
       });
-    } catch {
+    } catch (error) {
       res.status(400).json({ error: error.message });
     }
   }
