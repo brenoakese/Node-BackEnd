@@ -26,17 +26,26 @@ class UserRepository {
   }
 
   async findByEmail(email) {
-    const { rows } = await db.query(
-      "SELECT * FROM public.usuarios WHERE email = $1",
-      [email]
-    );
+    try {
+      const { rows } = await db.query(
+        "SELECT * FROM public.usuarios WHERE email = $1",
+        [email]
+      );
 
-    return new User(
-      rows[0].id,
-      rows[0].name,
-      rows[0].email,
-      rows[0].password
-    );
+      if (rows.length === 0) {
+        return null; // No user found with the given email
+      }
+
+      return new User(
+        rows[0].id,
+        rows[0].name,
+        rows[0].email,
+        rows[0].password
+      );
+    } catch (error) {
+      console.error("Error finding user by email:", error);
+      throw new Error("Error finding user by email");
+    }
   }
 }
 

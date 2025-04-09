@@ -29,7 +29,7 @@ class AuthController {
     try {
       const { email, password } = req.body;
 
-      console.log("email: ", email, "password: ", password);
+      
 
       if (!email || !password) {
         return res

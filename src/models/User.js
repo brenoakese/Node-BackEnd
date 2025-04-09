@@ -16,7 +16,6 @@ class User {
   }
 
   async encryptPassword() {
-    console.log("Encrypting password...", this.password);
     
     if (!this.password) {
       throw new Error("Password is required for encryption");
