@@ -9,13 +9,11 @@ class UserRepository {
 
   async create(user) {
     try {
-      const { name, email, password } = user;
-
-      console.log(`${name}, ${email}, ${password}`);
+      console.log("id", user.id);
 
       const { rows } = await db.query(
-        "INSERT INTO public.usuarios (name, email, password) VALUES ($1, $2, $3) RETURNING *",
-        [name, email, password]
+        "INSERT INTO public.usuarios (id, name, email, password) VALUES ($1, $2, $3, $4) RETURNING *",
+        [user.id, user.name, user.email, user.password]
       );
 
       return rows[0];
