@@ -1,6 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import bcrypt from "bcrypt";
-
+import bcrypt from "bcryptjs"; // Mudança aqui: bcrypt -> bcryptjs
 
 class User {
   id;
@@ -16,7 +15,6 @@ class User {
   }
 
   async encryptPassword() {
-    
     if (!this.password) {
       throw new Error("Password is required for encryption");
     }
