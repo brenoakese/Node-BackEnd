@@ -45,6 +45,62 @@ class UserRepository {
       throw new Error("Error finding user by email");
     }
   }
+
+  async findById(id) {
+    try {
+      const { rows } = await db.query(
+        "SELECT * FROM public.usuarios WHERE id = $1",
+        [id]
+      );
+
+      if (rows.length === 0) {
+        return null;
+      }
+
+      return new User(
+        rows[0].id,
+        rows[0].name,
+        rows[0].email,
+        rows[0].password
+      );
+    } catch (error) {
+      console.error("Error finding user by id:", error);
+      throw new Error("Error finding user by id");
+    }
+  }
+
+  async findAll() {
+    try {
+      const { rows } = await db.query(
+        "SELECT id, name, email, created_at, updated_at FROM public.usuarios ORDER BY created_at DESC"
+      );
+
+      return rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }));
+    } catch (error) {
+      console.error("Error finding all users:", error);
+      throw new Error("Error finding all users");
+    }
+  }
+
+  async deleteById(id) {
+    try {
+      const { rows } = await db.query(
+        "DELETE FROM public.usuarios WHERE id = $1 RETURNING *",
+        [id]
+      );
+
+      return rows.length > 0;
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      throw new Error("Error deleting user");
+    }
+  }
 }
 
 export default UserRepository;

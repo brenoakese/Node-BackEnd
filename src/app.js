@@ -1,7 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
-// Import outros routes conforme necessário
+import userRoutes from './routes/userRoutes.js';
+import eventRoutes from './routes/evenRoutes.js'; 
 
 const app = express();
 
@@ -39,22 +40,62 @@ app.use((req, res, next) => {
 
 // Rotas
 app.use('/api', authRoutes);
+app.use('/api', userRoutes);
+app.use('/api', eventRoutes); 
+
 
 // Rota de teste
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     message: 'Server is running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    version: '1.0.0'
   });
+});
+
+// Rota para testar conexão com banco
+app.get('/api/test-db', async (req, res) => {
+  try {
+    const db = await import('./config/db.js');
+    await db.default.query('SELECT NOW()');
+    res.json({
+      status: 'OK',
+      message: 'Database connected successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'ERROR',
+      message: 'Database connection failed',
+      error: error.message
+    });
+  }
 });
 
 // Middleware de tratamento de erro 404
 app.use('*', (req, res) => {
+  console.log(`❌ Rota não encontrada: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     error: 'Rota não encontrada',
     path: req.originalUrl,
-    method: req.method
+    method: req.method,
+    availableRoutes: {
+      auth: [
+        'POST /api/auth/register',
+        'POST /api/auth/login'
+      ],
+      users: [
+        'GET /api/users',
+        'GET /api/users/me',
+        'GET /api/users/:id',
+        'DELETE /api/users/:id'
+      ],
+      health: [
+        'GET /api/health',
+        'GET /api/test-db'
+      ]
+    }
   });
 });
 
@@ -63,7 +104,8 @@ app.use((error, req, res, next) => {
   console.error('Erro não tratado:', error);
   res.status(500).json({
     error: 'Erro interno do servidor',
-    details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
   });
 });
 

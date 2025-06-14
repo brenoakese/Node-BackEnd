@@ -1,6 +1,7 @@
 import express from "express";
 import AuthController from "../controller/authController.js";
 import authValidations from "../validations/authValidations.js";
+import authenticateToken from "../middleware/auth.js";
 import { validationResult } from "express-validator";
 
 const router = express.Router();
@@ -14,6 +15,7 @@ const validate = (req, res, next) => {
   next();
 };
 
+// Rotas públicas (não requerem autenticação)
 router.post(
   "/auth/login",
   authValidations.login,
@@ -26,6 +28,19 @@ router.post(
   authValidations.register,
   validate,
   authController.register.bind(authController)
+);
+
+// Rotas protegidas (requerem autenticação)
+router.post(
+  "/auth/logout",
+  authenticateToken,
+  authController.logout.bind(authController)
+);
+
+router.get(
+  "/auth/verify",
+  authenticateToken,
+  authController.verifyToken.bind(authController)
 );
 
 export default router;

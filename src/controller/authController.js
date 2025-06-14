@@ -1,8 +1,25 @@
+import jwt from 'jsonwebtoken';
 import userDto from "../dtos/userDto.js";
 import UserService from "../service/userService.js";
 
 class AuthController {
   userService = new UserService();
+
+  // Função para gerar JWT token
+  generateToken(user) {
+    const payload = {
+      id: user.id,
+      email: user.email,
+      name: user.name
+    };
+
+    const options = {
+      expiresIn: '24h', // Token expira em 24 horas
+      issuer: 'commitime-api'
+    };
+
+    return jwt.sign(payload, process.env.JWT_SECRET || 'your-secret-key', options);
+  }
 
   async register(req, res) {
     try {
@@ -45,9 +62,13 @@ class AuthController {
         email: user.email
       });
 
+      // Gerar token JWT para login automático após registro
+      const token = this.generateToken(user);
+
       res.status(201).json({
         message: "Usuário registrado com sucesso",
         success: true,
+        token: token,
         user: {
           id: user.id,
           name: user.name,
@@ -59,7 +80,7 @@ class AuthController {
       console.error("❌ Erro no registro:", error);
       
       // Tratamento de erros específicos
-      if (error.message.includes('duplicate') || error.message.includes('unique')) {
+      if (error.message.includes('duplicate') || error.message.includes('unique') || error.message.includes('already exists')) {
         return res.status(409).json({ 
           error: "Email já está em uso",
           code: "EMAIL_ALREADY_EXISTS"
@@ -107,10 +128,13 @@ class AuthController {
 
       console.log("✅ Login realizado com sucesso");
 
+      // Gerar token JWT
+      const token = this.generateToken(user);
+
       return res.status(200).json({
         message: "Login realizado com sucesso",
         success: true,
-        token: "dummy-token-" + Date.now(), // Você pode implementar JWT aqui
+        token: token,
         user: {
           id: user.id,
           name: user.name,
@@ -122,6 +146,45 @@ class AuthController {
       console.error("❌ Erro no login:", error);
       res.status(500).json({ 
         error: "Erro interno do servidor durante o login",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+
+  async logout(req, res) {
+    try {
+      // Com JWT, o logout é feito no frontend removendo o token
+      // Aqui podemos adicionar o token a uma blacklist se necessário
+      
+      console.log("👋 Logout realizado para usuário:", req.user?.email);
+      
+      return res.status(200).json({
+        message: "Logout realizado com sucesso",
+        success: true
+      });
+
+    } catch (error) {
+      console.error("❌ Erro no logout:", error);
+      res.status(500).json({ 
+        error: "Erro interno do servidor durante o logout",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+
+  async verifyToken(req, res) {
+    try {
+      // Se chegou até aqui, o token é válido (passou pelo middleware)
+      return res.status(200).json({
+        success: true,
+        message: "Token válido",
+        user: req.user
+      });
+
+    } catch (error) {
+      console.error("❌ Erro na verificação do token:", error);
+      res.status(500).json({ 
+        error: "Erro interno do servidor",
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
