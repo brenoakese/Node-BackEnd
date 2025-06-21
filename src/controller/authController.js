@@ -73,6 +73,9 @@ class AuthController {
           id: user.id,
           name: user.name,
           email: user.email,
+          familia_id: user.familia_id,
+          papel: user.papel,
+          papel_detalhado: user.papel_detalhado,
         },
       });
 
@@ -139,6 +142,9 @@ class AuthController {
           id: user.id,
           name: user.name,
           email: user.email,
+          familia_id: user.familia_id,
+          papel: user.papel,
+          papel_detalhado: user.papel_detalhado,
         },
       });
 

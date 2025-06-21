@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
+import moment from "moment";
 
 class Event {
   id;
@@ -9,11 +10,24 @@ class Event {
   pessoa;
   descricao;
   usuarioId;
+  status;
   createdAt;
   updatedAt;
 
-  constructor(id = uuidv4(), titulo, data, hora, tipo, pessoa, descricao, usuarioId) {
-    this.id = id;
+  constructor(
+    id,
+    titulo,
+    data,
+    hora,
+    tipo,
+    pessoa,
+    descricao,
+    usuarioId,
+    status = 'pendente',
+    created_at,
+    updated_at
+  ) {
+    this.id = id || uuidv4();
     this.titulo = titulo;
     this.data = data;
     this.hora = hora;
@@ -21,24 +35,25 @@ class Event {
     this.pessoa = pessoa;
     this.descricao = descricao;
     this.usuarioId = usuarioId;
+    this.status = status;
+    this.created_at = created_at;
+    this.updated_at = updated_at;
   }
 
   static fromDatabase(row) {
-    const event = new Event(
+    return new Event(
       row.id,
       row.titulo,
-      row.data,
-      row.hora,
+      moment(row.data).format('DD/MM/YYYY'),
+      moment(row.hora, 'HH:mm:ss').format('HH:mm'),
       row.tipo,
       row.pessoa,
       row.descricao,
-      row.usuario_id
+      row.usuario_id,
+      row.status,
+      row.created_at,
+      row.updated_at
     );
-    
-    event.createdAt = row.created_at;
-    event.updatedAt = row.updated_at;
-    
-    return event;
   }
 
   toDatabase() {
@@ -58,14 +73,15 @@ class Event {
     return {
       id: this.id,
       titulo: this.titulo,
-      data: this.formatDate(this.data),
-      hora: this.formatTime(this.hora),
+      data: this.data,
+      hora: this.hora,
       tipo: this.tipo,
       pessoa: this.pessoa,
       descricao: this.descricao,
-      usuarioId: this.usuarioId,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt
+      usuario_id: this.usuarioId,
+      status: this.status,
+      created_at: this.created_at,
+      updated_at: this.updated_at,
     };
   }
 
@@ -96,78 +112,19 @@ class Event {
     return `${hours}:${minutes}`;
   }
 
-  static parseDate(dateString) {
-    // Converte DD/MM/YYYY para YYYY-MM-DD
-    const [day, month, year] = dateString.split('/');
-    return `${year}-${month}-${day}`;
+  static parseDate(dateStr) {
+    return moment(dateStr, 'DD/MM/YYYY').format('YYYY-MM-DD');
   }
 
-  static parseTime(timeString) {
-    // Garante formato HH:MM:SS para o banco
-    if (timeString.length === 5) {
-      return `${timeString}:00`;
-    }
-    return timeString;
+  static parseTime(timeStr) {
+    return moment(timeStr, 'HH:mm').format('HH:mm:ss');
   }
 
   validate() {
     const errors = [];
-
-    if (!this.titulo || this.titulo.trim().length === 0) {
-      errors.push('Título é obrigatório');
-    }
-
-    if (!this.data) {
-      errors.push('Data é obrigatória');
-    }
-
-    if (!this.hora) {
-      errors.push('Hora é obrigatória');
-    }
-
-    if (!this.tipo || !['medico', 'escola', 'outros'].includes(this.tipo)) {
-      errors.push('Tipo deve ser: medico, escola ou outros');
-    }
-
-    if (!this.pessoa || this.pessoa.trim().length === 0) {
-      errors.push('Pessoa é obrigatória');
-    }
-
-    if (!this.usuarioId) {
-      errors.push('ID do usuário é obrigatório');
-    }
-
-    // Validar formato da data (DD/MM/YYYY)
-    if (this.data) {
-      const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
-      if (!dateRegex.test(this.data)) {
-        errors.push('Data deve estar no formato DD/MM/YYYY');
-      } else {
-        const [day, month, year] = this.data.split('/').map(Number);
-        const date = new Date(year, month - 1, day);
-        
-        if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
-          errors.push('Data inválida');
-        }
-        
-        // Verificar se não é no passado
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        if (date < today) {
-          errors.push('Não é possível criar eventos no passado');
-        }
-      }
-    }
-
-    // Validar formato da hora (HH:MM)
-    if (this.hora) {
-      const timeRegex = /^([01]?[0-9]|2[0-3]):([0-5][0-9])$/;
-      if (!timeRegex.test(this.hora)) {
-        errors.push('Hora deve estar no formato HH:MM (00:00 a 23:59)');
-      }
-    }
-
+    if (!this.titulo || this.titulo.length < 3) errors.push('Título deve ter pelo menos 3 caracteres.');
+    if (!moment(this.data, 'DD/MM/YYYY', true).isValid()) errors.push('Data inválida. Use o formato DD/MM/YYYY.');
+    if (!moment(this.hora, 'HH:mm', true).isValid()) errors.push('Hora inválida. Use o formato HH:mm.');
     return errors;
   }
 }

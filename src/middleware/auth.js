@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import UserService from '../service/userService.js';
+import User from '../models/User.js';
 
 const userService = new UserService();
 
@@ -20,7 +21,7 @@ const authenticateToken = async (req, res, next) => {
       // Para desenvolvimento, aceitar dummy tokens
       // Em produção, remover esta parte
       console.log('⚠️  Usando dummy token para desenvolvimento');
-      req.user = { id: 'dummy-user', email: 'test@test.com' };
+      req.user = new User('dummy-user', 'Test User', 'test@test.com', null, null, 'responsavel', 'dono');
       return next();
     }
 
@@ -30,6 +31,9 @@ const authenticateToken = async (req, res, next) => {
     // Buscar o usuário no banco para garantir que ainda existe
     const user = await userService.findById(decoded.id);
     
+    // Log para depuração: verificar o que está sendo retornado
+    console.log('🔍 User object from service in middleware:', user);
+
     if (!user) {
       return res.status(401).json({ 
         error: 'Usuário não encontrado',
@@ -37,12 +41,16 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
-    // Adicionar informações do usuário à requisição
-    req.user = {
-      id: user.id,
-      email: user.email,
-      name: user.name
-    };
+    // Criar uma instância da classe User com os dados do banco
+    req.user = new User(
+      user.id,
+      user.name,
+      user.email,
+      user.password,
+      user.familia_id,
+      user.papel,
+      user.papel_detalhado
+    );
 
     next();
   } catch (error) {

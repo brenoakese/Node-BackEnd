@@ -1,224 +1,130 @@
 import EventRepository from '../repository/eventRepository.js';
+import UserRepository from '../repository/userRepository.js';
 import Event from '../models/Event.js';
 
 class EventService {
   constructor() {
     this.eventRepository = new EventRepository();
+    this.userRepository = new UserRepository();
   }
 
-  async createEvent(eventData, usuarioId) {
-    try {
-      console.log('🎯 Criando novo evento para usuário:', usuarioId);
-      
-      // Criar instância do evento
-      const event = new Event(
-        undefined, // ID será gerado automaticamente
-        eventData.titulo,
-        eventData.data,
-        eventData.hora,
-        eventData.tipo,
-        eventData.pessoa,
-        eventData.descricao,
-        usuarioId
-      );
+  /**
+   * Verifica se o usuário é dependente baseado no papel_detalhado
+   */
+  _isDependente(user) {
+    return ['filho', 'filha', 'neto', 'neta'].includes(user.papel_detalhado);
+  }
 
-      // Validar dados do evento
-      const validationErrors = event.validate();
-      if (validationErrors.length > 0) {
-        throw new Error(`Dados inválidos: ${validationErrors.join(', ')}`);
+  /**
+   * Verifica se o usuário é responsável baseado no papel_detalhado
+   */
+  _isResponsavel(user) {
+    return ['dono', 'pai', 'mae', 'avo', 'avó'].includes(user.papel_detalhado);
+  }
+
+  /**
+   * Cria um evento.
+   * Se o criador for responsável (dono, pai, mãe, etc.), pode criar para outros membros da família.
+   * Se for dependente, NÃO pode criar eventos.
+   */
+  async createEvent(eventData, creatorUser) {
+    // VALIDAÇÃO CRÍTICA: Dependentes NÃO podem criar eventos
+    if (this._isDependente(creatorUser)) {
+      throw new Error('Dependentes não podem criar eventos. Apenas responsáveis podem criar eventos.');
+    }
+
+    const destinatarioId = eventData.usuario_id || creatorUser.id;
+
+    // Lógica de permissão para criação
+    if (destinatarioId !== creatorUser.id) {
+      if (!this._isResponsavel(creatorUser)) {
+        throw new Error('Apenas responsáveis podem criar eventos para outros membros.');
       }
-
-      // Salvar no banco
-      const savedEvent = await this.eventRepository.create(event);
-      
-      console.log('✅ Evento criado com sucesso');
-      return savedEvent;
-      
-    } catch (error) {
-      console.error('❌ Erro no serviço ao criar evento:', error);
-      throw error;
+      // Valida se o destinatário pertence à mesma família
+      const destinatario = await this.userRepository.findById(destinatarioId);
+      if (!destinatario || destinatario.familia_id?.toString() !== creatorUser.familia_id?.toString()) {
+        throw new Error('Destinatário inválido ou não pertence à sua família.');
+      }
     }
+
+    const event = new Event(
+      undefined,
+      eventData.titulo,
+      eventData.data,
+      eventData.hora,
+      eventData.tipo,
+      eventData.pessoa,
+      eventData.descricao,
+      destinatarioId,
+      'pendente' // Status padrão
+    );
+
+    const validationErrors = event.validate();
+    if (validationErrors.length > 0) {
+      throw new Error(`Dados inválidos: ${validationErrors.join(', ')}`);
+    }
+
+    return this.eventRepository.create(event);
   }
 
-  async getAllEvents(usuarioId) {
-    try {
-      console.log('📋 Buscando todos os eventos do usuário:', usuarioId);
-      
-      const events = await this.eventRepository.findByUserId(usuarioId);
-      
-      console.log(`✅ ${events.length} eventos encontrados`);
-      return events;
-      
-    } catch (error) {
-      console.error('❌ Erro no serviço ao buscar eventos:', error);
-      throw error;
+  /**
+   * Busca eventos.
+   * Se for responsável, vê todos os eventos da família.
+   * Se for dependente, vê apenas os seus.
+   */
+  async getAllEvents(user) {
+    if (this._isResponsavel(user) && user.familia_id) {
+      return this.eventRepository.findAllByFamilyId(user.familia_id);
     }
+    return this.eventRepository.findByUserId(user.id);
   }
 
-  async getUpcomingEvents(usuarioId) {
-    try {
-      console.log('📅 Buscando eventos futuros do usuário:', usuarioId);
-      
-      const events = await this.eventRepository.findUpcomingByUserId(usuarioId);
-      
-      console.log(`✅ ${events.length} eventos futuros encontrados`);
-      return events;
-      
-    } catch (error) {
-      console.error('❌ Erro no serviço ao buscar eventos futuros:', error);
-      throw error;
+  /**
+   * Atualiza o status de um evento com regras de permissão.
+   */
+  async updateEventStatus(eventId, newStatus, user) {
+    const event = await this.eventRepository.findById(eventId);
+    if (!event) {
+      throw new Error('Evento não encontrado');
     }
+
+    const eventOwner = await this.userRepository.findById(event.usuario_id);
+    if (eventOwner.familia_id?.toString() !== user.familia_id?.toString()) {
+      throw new Error('Acesso negado. O evento não pertence à sua família.');
+    }
+
+    switch (newStatus) {
+      case 'concluido':
+        if (event.status !== 'pendente') throw new Error('Apenas eventos pendentes podem ser concluídos.');
+        if (event.usuario_id !== user.id) throw new Error('Você só pode concluir seus próprios eventos.');
+        break;
+      case 'verificado':
+        if (event.status !== 'concluido') throw new Error('Apenas eventos concluídos podem ser verificados.');
+        if (!this._isResponsavel(user)) throw new Error('Apenas responsáveis podem verificar eventos.');
+        break;
+      default:
+        throw new Error(`Status inválido: ${newStatus}`);
+    }
+
+    return this.eventRepository.updateStatus(eventId, newStatus);
   }
 
+  // Métodos antigos que podem precisar de revisão de permissão, mas mantidos por enquanto
   async getEventById(id, usuarioId) {
-    try {
-      console.log('🔍 Buscando evento por ID:', id);
-      
-      const event = await this.eventRepository.findById(id, usuarioId);
-      
-      if (!event) {
-        throw new Error('Evento não encontrado');
-      }
-      
-      console.log('✅ Evento encontrado');
-      return event;
-      
-    } catch (error) {
-      console.error('❌ Erro no serviço ao buscar evento por ID:', error);
-      throw error;
-    }
+    return this.eventRepository.findByIdAndUser(id, usuarioId);
   }
 
   async updateEvent(id, eventData, usuarioId) {
-    try {
-      console.log('📝 Atualizando evento:', id);
-      
-      // Verificar se evento existe
-      const existingEvent = await this.eventRepository.findById(id, usuarioId);
-      if (!existingEvent) {
-        throw new Error('Evento não encontrado');
-      }
-
-      // Criar instância temporária para validação
-      const tempEvent = new Event(
-        id,
-        eventData.titulo,
-        eventData.data,
-        eventData.hora,
-        eventData.tipo,
-        eventData.pessoa,
-        eventData.descricao,
-        usuarioId
-      );
-
-      // Validar dados
-      const validationErrors = tempEvent.validate();
-      if (validationErrors.length > 0) {
-        throw new Error(`Dados inválidos: ${validationErrors.join(', ')}`);
-      }
-
-      // Atualizar no banco
-      const updatedEvent = await this.eventRepository.update(id, usuarioId, eventData);
-      
-      if (!updatedEvent) {
-        throw new Error('Erro ao atualizar evento');
-      }
-      
-      console.log('✅ Evento atualizado com sucesso');
-      return updatedEvent;
-      
-    } catch (error) {
-      console.error('❌ Erro no serviço ao atualizar evento:', error);
-      throw error;
-    }
+    const existingEvent = await this.eventRepository.findByIdAndUser(id, usuarioId);
+    if (!existingEvent) throw new Error('Evento não encontrado para este usuário.');
+    return this.eventRepository.update(id, usuarioId, eventData);
   }
 
   async deleteEvent(id, usuarioId) {
-    try {
-      console.log('🗑️ Deletando evento:', id);
-      
-      // Verificar se evento existe
-      const existingEvent = await this.eventRepository.findById(id, usuarioId);
-      if (!existingEvent) {
-        throw new Error('Evento não encontrado');
-      }
-
-      // Deletar do banco
-      const deleted = await this.eventRepository.delete(id, usuarioId);
-      
-      if (!deleted) {
-        throw new Error('Erro ao deletar evento');
-      }
-      
-      console.log('✅ Evento deletado com sucesso');
-      return true;
-      
-    } catch (error) {
-      console.error('❌ Erro no serviço ao deletar evento:', error);
-      throw error;
-    }
-  }
-
-  async getEventsByDateRange(usuarioId, startDate, endDate) {
-    try {
-      console.log('📅 Buscando eventos entre:', startDate, 'e', endDate);
-      
-      const events = await this.eventRepository.findByDateRange(usuarioId, startDate, endDate);
-      
-      console.log(`✅ ${events.length} eventos encontrados no período`);
-      return events;
-      
-    } catch (error) {
-      console.error('❌ Erro no serviço ao buscar eventos por período:', error);
-      throw error;
-    }
-  }
-
-  async getEventsByType(usuarioId, tipo) {
-    try {
-      console.log('🏷️ Buscando eventos do tipo:', tipo);
-      
-      if (!['medico', 'escola', 'outros'].includes(tipo)) {
-        throw new Error('Tipo inválido. Use: medico, escola ou outros');
-      }
-      
-      const events = await this.eventRepository.findByType(usuarioId, tipo);
-      
-      console.log(`✅ ${events.length} eventos do tipo ${tipo} encontrados`);
-      return events;
-      
-    } catch (error) {
-      console.error('❌ Erro no serviço ao buscar eventos por tipo:', error);
-      throw error;
-    }
-  }
-
-  async getEventStats(usuarioId) {
-    try {
-      console.log('📊 Gerando estatísticas de eventos para usuário:', usuarioId);
-      
-      const allEvents = await this.eventRepository.findByUserId(usuarioId);
-      const upcomingEvents = await this.eventRepository.findUpcomingByUserId(usuarioId);
-      
-      const stats = {
-        total: allEvents.length,
-        upcoming: upcomingEvents.length,
-        past: allEvents.length - upcomingEvents.length,
-        byType: {
-          medico: allEvents.filter(e => e.tipo === 'medico').length,
-          escola: allEvents.filter(e => e.tipo === 'escola').length,
-          outros: allEvents.filter(e => e.tipo === 'outros').length
-        }
-      };
-      
-      console.log('✅ Estatísticas geradas:', stats);
-      return stats;
-      
-    } catch (error) {
-      console.error('❌ Erro no serviço ao gerar estatísticas:', error);
-      throw error;
-    }
+    const existingEvent = await this.eventRepository.findByIdAndUser(id, usuarioId);
+    if (!existingEvent) throw new Error('Evento não encontrado para este usuário.');
+    return this.eventRepository.delete(id, usuarioId);
   }
 }
 
-export default EventService;
+export default EventService; 

@@ -3,6 +3,9 @@ import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import eventRoutes from './routes/evenRoutes.js'; 
+import familiaRoutes from './routes/familiaRoutes.js';
+import materiaRoutes from './routes/materiaRoutes.js';
+import tarefaRoutes from './routes/tarefaRoutes.js';
 
 const app = express();
 
@@ -42,6 +45,9 @@ app.use((req, res, next) => {
 app.use('/api', authRoutes);
 app.use('/api', userRoutes);
 app.use('/api', eventRoutes); 
+app.use('/api', familiaRoutes);
+app.use('/api', materiaRoutes);
+app.use('/api', tarefaRoutes);
 
 
 // Rota de teste
@@ -90,6 +96,35 @@ app.use('*', (req, res) => {
         'GET /api/users/me',
         'GET /api/users/:id',
         'DELETE /api/users/:id'
+      ],
+      familias: [
+        'POST /api/familias',
+        'POST /api/familias/join',
+        'GET /api/familias/me'
+      ],
+      events: [
+        'POST /api/events',
+        'GET /api/events',
+        'GET /api/events/:id',
+        'PUT /api/events/:id',
+        'PUT /api/events/:id/status',
+        'DELETE /api/events/:id'
+      ],
+      materias: [
+        'POST /api/materias',
+        'GET /api/materias/me',
+        'GET /api/materias/usuario/:usuarioId',
+        'GET /api/materias/:id',
+        'PUT /api/materias/:id',
+        'DELETE /api/materias/:id',
+        'POST /api/materias/dependente/:usuarioId'
+      ],
+      tarefas: [
+        'POST /api/tarefas',
+        'GET /api/tarefas',
+        'GET /api/tarefas/:id',
+        'PUT /api/tarefas/:id/status',
+        'DELETE /api/tarefas/:id'
       ],
       health: [
         'GET /api/health',

@@ -22,7 +22,7 @@ class EventRepository {
         eventData.tipo,
         eventData.pessoa,
         eventData.descricao,
-        eventData.usuario_id
+        eventData.usuario_id // Este ID agora é o do destinatário do evento
       ];
 
       const result = await db.query(query, values);
@@ -78,7 +78,61 @@ class EventRepository {
     }
   }
 
-  async findById(id, usuarioId) {
+  async findById(id) {
+    try {
+      const query = `SELECT * FROM eventos WHERE id = $1`;
+      const result = await db.query(query, [id]);
+      if (result.rows.length === 0) {
+        return null;
+      }
+      return Event.fromDatabase(result.rows[0]);
+    } catch (error) {
+      console.error('❌ Erro ao buscar evento por ID:', error);
+      throw error;
+    }
+  }
+
+  async findAllByFamilyId(familiaId) {
+    try {
+      const query = `
+        SELECT ev.*, us.name as pessoa_nome 
+        FROM eventos ev
+        JOIN usuarios us ON ev.usuario_id = us.id
+        WHERE us.familia_id = $1
+        ORDER BY ev.data ASC, ev.hora ASC
+      `;
+      const result = await db.query(query, [familiaId]);
+      return result.rows.map(row => {
+        const event = Event.fromDatabase(row);
+        event.pessoa_nome = row.pessoa_nome; // Adiciona nome do destinatário
+        return event;
+      });
+    } catch (error) {
+      console.error('❌ Erro ao buscar eventos da família:', error);
+      throw error;
+    }
+  }
+  
+  async updateStatus(id, status) {
+    try {
+      const query = `
+        UPDATE eventos 
+        SET status = $2, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING *
+      `;
+      const result = await db.query(query, [id, status]);
+      if (result.rows.length === 0) {
+        return null;
+      }
+      return Event.fromDatabase(result.rows[0]);
+    } catch (error) {
+      console.error('❌ Erro ao atualizar status do evento:', error);
+      throw error;
+    }
+  }
+
+  async findByIdAndUser(id, usuarioId) { // Renomeado para clareza
     try {
       console.log('🔍 Buscando evento por ID:', id, 'do usuário:', usuarioId);
       

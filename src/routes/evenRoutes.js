@@ -30,33 +30,9 @@ router.post('/events',
   eventController.createEvent.bind(eventController)
 );
 
-// GET /api/events - Buscar todos os eventos do usuário
+// GET /api/events - Buscar todos os eventos (lógica de família aplicada)
 router.get('/events', 
   eventController.getAllEvents.bind(eventController)
-);
-
-// GET /api/events/upcoming - Buscar eventos futuros
-router.get('/events/upcoming', 
-  eventController.getUpcomingEvents.bind(eventController)
-);
-
-// GET /api/events/by-date-range - Buscar eventos por período
-router.get('/events/by-date-range', 
-  eventValidations.dateRange, 
-  validate, 
-  eventController.getEventsByDateRange.bind(eventController)
-);
-
-// GET /api/events/by-month - Buscar eventos por mês
-router.get('/events/by-month', 
-  eventValidations.monthQuery, 
-  validate, 
-  eventController.getEventsByMonth.bind(eventController)
-);
-
-// GET /api/events/by-type/:tipo - Buscar eventos por tipo
-router.get('/events/by-type/:tipo', 
-  eventController.getEventsByType.bind(eventController)
 );
 
 // GET /api/events/:id - Buscar evento por ID
@@ -64,6 +40,13 @@ router.get('/events/:id',
   eventValidations.eventId, 
   validate, 
   eventController.getEventById.bind(eventController)
+);
+
+// PUT /api/events/:id/status - Atualizar status do evento
+router.put('/events/:id/status',
+  eventValidations.eventId,
+  validate,
+  eventController.updateEventStatus.bind(eventController)
 );
 
 // PUT /api/events/:id - Atualizar evento
